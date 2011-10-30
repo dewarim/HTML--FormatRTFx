@@ -1,0 +1,9 @@
+This is an extension to HTML::FormatRTF which provides support for tables, some fonts and some simple heuristics to evaluate style and align attributes in HTML.
+
+Author: ingo_wiarda@dewarim.de
+
+License: This software is copyright (c) 2011 by Ingo Wiarda
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+(this means: http://dev.perl.org/licenses/artistic.html or the GPLv1, see:http://dev.perl.org/licenses/ )

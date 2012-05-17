@@ -85,7 +85,8 @@ sub tr_start{
 	# trgaphN: "Half the space between the cells of a table row in twips."
 	# trleftN: "Position of the leftmost edge of the table with respect to the left edge of its column."
 #	$self->out( \"{\\pard\\trowd\\trgaph10\\trleft10");
-	$self->out( \"{\\trowd\\trgaph10\\trleft10");
+#	$self->out( \"{\\trowd\\trgaph10\\trleft10");
+	$self->out( \"\\trowd\\trgaph10\\trleft10");
 
 	my $current_cell_end = 0;
 	foreach my $cell (@cells){
@@ -116,7 +117,7 @@ sub tr_start{
 
 sub tr_end{
 	my $self = shift;
-	$self->out( \"\\row\\pard\\par}\n");
+	$self->out( \"\\row\\pard\\par\n");
 }
 
 sub td_start{
@@ -356,8 +357,8 @@ sub emit_para {    # rather like showline in FormatPS
     #print "para: $para\n";
     $self->collect(
         sprintf(
-            '{\pard\sa%d\li%d\ri%d%s\plain' . "\n",
-#            '\pard\sa%d\li%d\ri%d%s\plain' . "\n",
+#            '{\pard\sa%d\li%d\ri%d%s\plain' . "\n",
+            '\pard\sa%d\li%d\ri%d%s\plain' . "\n",
             #100 +
             10 * $self->{'normal_halfpoint_size'} * ( $self->{'vspace'} || 0 ),
 
@@ -378,8 +379,8 @@ sub emit_para {    # rather like showline in FormatPS
         : (),
 
         $para,
-        "\n\\par$intbl}\n\n",
-#        "\n\\par$intbl\n\n",
+#        "\n\\par$intbl}\n\n",
+        "\n$intbl\\par\n\n",
     );
 
     $self->{'vspace'} = undef;    # we finally get to clear it here!

@@ -7,6 +7,38 @@ use Data::Dumper;
 
 my $PAGE_PX_WIDTH = 800; # assume a base page width of 800px (for wkhtml2pdf)
 
+# ------------------------------------------------------------------------
+my %Escape = (
+    map( ( chr($_), chr($_) ),    # things not apparently needing escaping
+        0x20 .. 0x7E ),
+    map( ( chr($_), sprintf( "\\'%02x", $_ ) ),    # apparently escapeworthy things
+        0x00 .. 0x1F, 0x5c, 0x7b, 0x7d, 0x7f .. 0xFF, 0x46 ),
+
+    # We get to escape out 'F' so that we can send RTF files thru the mail
+    # without the slightest worry that paragraphs beginning with "From"
+    # will get munged.
+
+    # And some refinements:
+    #"\n"   => "\n\\line ",
+    #"\cm"  => "\n\\line ",
+    #"\cj"  => "\n\\line ",
+
+    "\t" => "\\tab ",                              # Tabs (altho theoretically raw \t's are okay)
+
+    # "\f"   => "\n\\page\n", # Formfeed
+    "-"    => "\\_",                               # Turn plaintext '-' into a non-breaking hyphen
+    "\xA0" => "\\~",                               # Latin-1 non-breaking space
+    "\xAD" => "\\-",                               # Latin-1 soft (optional) hyphen
+
+    # CRAZY HACKS:
+    "\n" => "\\line\n",
+    "\r" => "\n",
+
+    # "\cb" => "{\n\\cs21\\lang1024\\noproof ",  # \\cf1
+    # "\cc" => "}",
+);
+
+
 # mapping for fonts: use {\f$font_map{lc(font_name)} text} to add a font.
 my %font_map = (
 	"courier new" => 3,
@@ -85,8 +117,8 @@ sub tr_start{
 	# trgaphN: "Half the space between the cells of a table row in twips."
 	# trleftN: "Position of the leftmost edge of the table with respect to the left edge of its column."
 #	$self->out( \"{\\pard\\trowd\\trgaph10\\trleft10");
-#	$self->out( \"{\\trowd\\trgaph10\\trleft10");
-	$self->out( \"\\trowd\\trgaph10\\trleft10");
+	$self->out( \"{\\trowd\\trgaph10\\trleft10");
+
 
 	my $current_cell_end = 0;
 	foreach my $cell (@cells){
@@ -117,7 +149,7 @@ sub tr_start{
 
 sub tr_end{
 	my $self = shift;
-	$self->out( \"\\row\\pard\\par\n");
+	$self->out( \"\\row\\pard\\par}\n");
 }
 
 sub td_start{
@@ -357,7 +389,6 @@ sub emit_para {    # rather like showline in FormatPS
     #print "para: $para\n";
     $self->collect(
         sprintf(
-#            '{\pard\sa%d\li%d\ri%d%s\plain' . "\n",
             '\pard\sa%d\li%d\ri%d%s\plain' . "\n",
             #100 +
             10 * $self->{'normal_halfpoint_size'} * ( $self->{'vspace'} || 0 ),
@@ -379,13 +410,44 @@ sub emit_para {    # rather like showline in FormatPS
         : (),
 
         $para,
-#        "\n\\par$intbl}\n\n",
         "\n$intbl\\par\n\n",
     );
 
     $self->{'vspace'} = undef;    # we finally get to clear it here!
 
     return;
+}
+
+
+use integer;
+
+sub rtf_esc {
+    my $x;                          # scratch
+    if ( !defined wantarray ) {     # void context: alter in-place!
+        for (@_) {
+            s/([F\x00-\x1F\-\\\{\}\x7F-\xFF])/$Escape{$1}/g;    # ESCAPER
+            s/([^\x00-\xFF])/'\\uc1\\u'.((ord($1)<32768)?ord($1):(ord($1)-65536)).'?'/eg;
+        }
+        return;
+    }
+    elsif (wantarray) {                                         # return an array
+        return map {
+            ;
+            ( $x = $_ ) =~ s/([F\x00-\x1F\-\\\{\}\x7F-\xFF])/$Escape{$1}/g;                       # ESCAPER
+            $x =~ s/([^\x00-\xFF])/'\\uc1\\u'.((ord($1)<32768)?ord($1):(ord($1)-65536)).'?'/eg;
+
+            # Hyper-escape all Unicode characters.
+            $x;
+        } @_;
+    }
+    else {    # return a single scalar
+        ( $x = ( ( @_ == 1 ) ? $_[0] : join '', @_ ) ) =~ s/([F\x00-\x1F\-\\\{\}\x7F-\xFF])/$Escape{$1}/g;    # ESCAPER
+                  # Escape \, {, }, -, control chars, and 7f-ff.
+        $x =~ s/([^\x00-\xFF])/'\\uc1\\u'.((ord($1)<32768)?ord($1):(ord($1)-65536)).'?'/eg;
+
+        # Hyper-escape all Unicode characters.
+        return $x;
+    }
 }
 
 

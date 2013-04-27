@@ -6,6 +6,7 @@ use base 'HTML::FormatRTF';
 use Data::Dumper;
 
 my $PAGE_PX_WIDTH = 800; # assume a base page width of 800px (for wkhtml2pdf)
+my $PAGE_MM_WIDTH = 210;
 
 # ------------------------------------------------------------------------
 my %Escape = (
@@ -71,6 +72,19 @@ sub begin {
     return;
 }
 
+# ------------------------------------------------------------------------
+sub doc_really_start {
+    my $self = $_[0];
+    return sprintf <<'END',
+\deflang%s\widowctrl
+{\footer\pard\qc\plain\f2\fs%s\chpgn\par}
+\fs%s
+
+END
+
+   $self->{'document_language'} || 1033, $self->{"header_halfpoint_size"}, $self->{"normal_halfpoint_size"},;
+}
+
 sub default_values {
     (   shift->SUPER::default_values(),
 		paperw => 11906, # A4 page width
@@ -90,6 +104,7 @@ sub doc_format{
 	$self->out(\'\margr'.$self->{'margr'});
 	$self->out(\'\margt'.$self->{'margt'});
 	$self->out(\'\margb'.$self->{'margb'});
+	return;
 }
 
 sub table_start{
@@ -132,12 +147,18 @@ sub tr_start{
 			$width =~ s/\%//;
 			$base_cell_width = $twips_width * $width / 100;
 		      }
-		  else{
+		  elsif($width =~ m/px/){
 		    $width =~ s/(?:\.00)px//; # remove irrelvant part of 240.00px
 		    my $factor = ($width / $PAGE_PX_WIDTH);
 #		    print "factor: $factor\n";
 		    $base_cell_width = $twips_width * $factor;
 
+		  }
+		  else{
+		    # assume mm
+		    $width =~ s/(?:\.00)?mm//;
+		    my $factor = ($width / $PAGE_MM_WIDTH);
+		    $base_cell_width = $twips_width * $factor;
 		  }
 		}
 #		print "width: $width // $base_cell_width\n";
@@ -497,7 +518,7 @@ Ingo Wiarda <ingo_wiarda@dewarim.de>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Ingo Wiarda
+This software is copyright (c) 2011-2013 by Ingo Wiarda
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
